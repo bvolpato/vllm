@@ -33,6 +33,7 @@ from torch import nn
 from transformers import DeepseekV2Config, DeepseekV3Config
 
 import vllm._custom_ops as ops
+import vllm.envs as envs
 from vllm._aiter_ops import rocm_aiter_ops
 from vllm.compilation.decorators import support_torch_compile
 from vllm.config import CacheConfig, ParallelConfig, VllmConfig, get_current_vllm_config
@@ -996,7 +997,7 @@ class DeepseekV2MLAAttention(nn.Module):
             mscale = yarn_get_mscale(scaling_factor, float(mscale_all_dim))
             self.scaling = self.scaling * mscale * mscale
 
-        self.is_v32 = hasattr(config, "index_topk")
+        self.is_v32 = hasattr(config, "index_topk") and not envs.VLLM_MLA_FORCE_DENSE
 
         _skip_topk = False
         if self.is_v32:
@@ -1229,7 +1230,7 @@ class DeepseekV2Model(nn.Module):
         self.device = current_platform.device_type
 
         self.vocab_size = config.vocab_size
-        self.is_v32 = hasattr(config, "index_topk")
+        self.is_v32 = hasattr(config, "index_topk") and not envs.VLLM_MLA_FORCE_DENSE
         if self.is_v32:
             topk_tokens = config.index_topk
             topk_indices_buffer = torch.empty(
@@ -1735,7 +1736,8 @@ class DeepseekV2ForCausalLM(
         )
 
     def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
-        loader = AutoWeightsLoader(self)
+        skip_substrs = [] if self.model.is_v32 else ["indexer."]
+        loader = AutoWeightsLoader(self, skip_substrs=skip_substrs)
         return loader.load_weights(weights)
 
 
