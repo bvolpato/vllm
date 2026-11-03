@@ -2991,14 +2991,13 @@ def test_register_packed_dsv4_mla_cache_as_single_region(
             kv_caches.update(zip(layer_names, views))
         connector.register_kv_caches(kv_caches)
 
-        # MLA pages transfer as whole rows; a ring page past the row start keeps
-        # its own region.
+        # MLA pages transfer as whole rows. Every ring page keeps its own region,
+        # also at the row start, because its block_len differs from the row's.
         ring_pages = [
             (cache.data_ptr(), spec.page_size_bytes)
             for layer_names, spec in zip(group_layers, specs)
             if isinstance(spec, CircularBufferSpec)
             for cache in (kv_caches[name] for name in layer_names)
-            if cache.data_ptr() != raw.data_ptr()
         ]
         _agent, block_runs = wrapper.prep_xfer_dlist.call_args[0]
         assert connector.connector_worker.kv_caches_base_addr[

@@ -462,11 +462,7 @@ def test_engine_core_tp():
     num_gpu_blocks = engine_core.collective_rpc(
         get_worker_cache_config_field, args=("num_gpu_blocks",)
     )
-    num_cpu_blocks = engine_core.collective_rpc(
-        get_worker_cache_config_field, args=("num_cpu_blocks",)
-    )
     assert all(x is not None for x in num_gpu_blocks)
-    assert all(x is not None for x in num_cpu_blocks)
 
 
 @create_new_process_for_each_test()

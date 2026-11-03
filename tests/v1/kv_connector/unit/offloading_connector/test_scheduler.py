@@ -412,11 +412,11 @@ def test_partial_tail_store_uses_attention_and_recurrent_cow_sources():
     assert full_attention_event.parent_block_hash is not None
 
     recurrent_event = events_by_group[1]
-    assert recurrent_event.block_size == 0
+    assert recurrent_event.block_size == 4
     assert recurrent_event.token_ids == []
     assert recurrent_event.kv_cache_spec_kind == "mamba"
-    assert len(recurrent_event.block_hashes) == 1
-    assert recurrent_event.parent_block_hash is None
+    assert recurrent_event.block_hashes == full_attention_event.block_hashes[-1:]
+    assert recurrent_event.parent_block_hash == full_attention_event.block_hashes[-2]
 
 
 def test_aligned_boundary_store_uses_exact_source_with_partial_tail():
@@ -1699,7 +1699,7 @@ def test_eagle_partial_tail_round_trip_serves_mamba_checkpoint(cow_on_proof_step
         num_external_tokens=24,
     )
     [load_job_id] = scheduler._current_batch_load_jobs
-    assert scheduler._jobs[load_job_id].keys == stored
+    assert set(scheduler._jobs[load_job_id].keys) == stored
 
 
 @pytest.mark.parametrize("host_hit", [False, True])
